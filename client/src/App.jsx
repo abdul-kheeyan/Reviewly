@@ -4,10 +4,11 @@ import { LoginModal } from "@/components/LoginModal";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import LandingPage from "@/pages/LandingPage";
 import DashboardPage from "@/pages/DashboardPage";
+import RepoDetailPage from "@/pages/RepoDetailPage";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthModalProvider>
         <Routes>
           {/* Public — nobody is redirected to a login screen just for visiting the site. */}
@@ -20,6 +21,15 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/dashboard/repo/:repoId"
+            element={
+              <ProtectedRoute>
+                <RepoDetailPage />
               </ProtectedRoute>
             }
           />

@@ -1,6 +1,9 @@
+import { useNavigate } from "react-router-dom";
 import { SplineScene } from "@/components/ui/spline-scene";
 import { Spotlight } from "@/components/ui/spotlight";
 import { useAuthModal } from "@/context/AuthModalContext";
+import { useAuth } from "@/hooks/useAuth";
+import { ArrowRight, LayoutDashboard } from "lucide-react";
 
 const FEATURES = [
   { icon: "◱", title: "Inline diff review", desc: "Issues and Copilot suggestions appear right on the line they affect, in a Monaco-powered diff viewer — no context switching." },
@@ -25,12 +28,14 @@ const AUDIENCE = [
 
 export default function LandingPage() {
   const { openModal } = useAuthModal();
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div>
       {/* NAV */}
       <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-gray-700 bg-gray-800/85 px-8 py-4 backdrop-blur-md">
-        <div className="flex items-center gap-2.5 font-display text-lg font-bold tracking-tight">
+        <div className="flex items-center gap-2.5 font-display text-lg font-bold tracking-tight cursor-pointer" onClick={() => navigate("/")}>
           <span className="flex h-6.5 w-6.5 items-center justify-center rounded-md bg-gradient-to-br from-white to-gray-400 font-mono text-sm font-semibold text-gray-800">
             R
           </span>
@@ -42,18 +47,30 @@ export default function LandingPage() {
           <a href="#audience" className="hover:text-white">Who it's for</a>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => openModal()}
-            className="rounded-md border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white"
-          >
-            Sign in
-          </button>
-          <button
-            onClick={() => openModal("Get started")}
-            className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-100"
-          >
-            Get started
-          </button>
+          {isAuthenticated ? (
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-90"
+            >
+              <LayoutDashboard size={16} />
+              Dashboard ({user?.name?.split(" ")[0] || "User"})
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => openModal()}
+                className="rounded-md border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white"
+              >
+                Sign in
+              </button>
+              <button
+                onClick={() => openModal("Get started")}
+                className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-100"
+              >
+                Get started
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -81,9 +98,9 @@ export default function LandingPage() {
         {/* pointer-events-none lets mouse reach the Spline canvas on the right; buttons/links opt back in. */}
         <div className="pointer-events-none relative z-[2] mx-auto flex w-full max-w-[1180px]">
           <div className="w-1/2 max-w-[560px]">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-gray-600 bg-white/5 px-3 py-1.5 font-mono text-xs text-gray-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-white" />
-              Powered by GitHub Copilot + Azure OpenAI
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 font-mono text-xs text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Powered by Google Gemini AI
             </div>
 
             <h1 className="mb-5 font-display text-[clamp(34px,4.6vw,54px)] font-semibold leading-[1.06] tracking-tight">
@@ -98,25 +115,24 @@ export default function LandingPage() {
             </h1>
 
             <p className="mb-8 max-w-[480px] text-[16.5px] leading-relaxed text-gray-400">
-              Reviewly reads every pull request the moment it opens, flags real issues inline, and
-              teaches your team as it goes — so review time goes down and code quality goes up.
+              Reviewly analyzes your code repositories, detects bugs and security vulnerabilities, explains complex architectures, and assesses code quality with AI.
             </p>
 
             <div className="mb-10 flex items-center gap-3.5">
               <button
                 onClick={() =>
                   openModal(
-                    "Connect a repository",
-                    "Sign in with GitHub to connect a repository. You can keep exploring the page without an account."
+                    "Get Started",
+                    "Sign in or create an account to start analyzing repositories."
                   )
                 }
-                className="pointer-events-auto rounded-md bg-white px-6 py-3.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-100"
+                className="pointer-events-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-90"
               >
-                Connect a repository
+                Get started free
               </button>
               <a
                 href="#features"
-                className="pointer-events-auto rounded-md border border-gray-700 px-6 py-3.5 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white"
+                className="pointer-events-auto rounded-xl border border-gray-700 px-6 py-3.5 text-sm font-semibold text-gray-400 transition hover:border-gray-500 hover:text-white"
               >
                 See how it works ↓
               </a>
@@ -214,12 +230,21 @@ export default function LandingPage() {
           Connect a repository and Reviewly starts on the very next pull request — no history to
           backfill, nothing to migrate.
         </p>
-        <button
-          onClick={() => openModal("Connect a repository")}
-          className="rounded-md bg-white px-6 py-3.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-100"
-        >
-          Connect a repository
-        </button>
+        {isAuthenticated ? (
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-90"
+          >
+            Go to Dashboard
+          </button>
+        ) : (
+          <button
+            onClick={() => openModal("Get Started", "Sign in to connect and analyze your repositories.")}
+            className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-90"
+          >
+            Connect a repository
+          </button>
+        )}
       </div>
 
       <footer className="flex items-center justify-between border-t border-gray-700 px-8 py-9 text-sm text-gray-400">

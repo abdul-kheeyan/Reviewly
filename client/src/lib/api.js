@@ -12,13 +12,12 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On a 401, log the user out client-side so ProtectedRoute sends them back to "/".
-// TODO: attempt a refresh-token exchange here before giving up, once
-// POST /api/auth/refresh exists on the server.
+// On a 401, log the user out client-side if it's an authenticated route failure.
 api.interceptors.response.use(
   (res) => res,
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthRoute = error.config?.url?.includes("/auth/login") || error.config?.url?.includes("/auth/register");
+    if (error.response?.status === 401 && !isAuthRoute) {
       useAuthStore.getState().logout();
     }
     return Promise.reject(error);

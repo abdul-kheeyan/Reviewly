@@ -16,7 +16,7 @@ export function ProtectedRoute({ children }) {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      openModal("Sign in required", "Sign in with GitHub to open this page.");
+      openModal("Sign in required", "Please sign in to access your dashboard.");
     }
   }, [isAuthenticated, openModal]);
 

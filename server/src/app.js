@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth.js";
 import repoRoutes from "./routes/repo.js";
 import prRoutes from "./routes/pr.js";
 import webhookRoutes from "./routes/webhook.js";
+import aiRoutes from "./routes/ai.js";
 
 export function createApp() {
   const app = express();
@@ -37,6 +38,7 @@ export function createApp() {
   app.use("/api/repos", apiLimiter, repoRoutes);
   app.use("/api/repos", apiLimiter, prRoutes); // pr routes are nested under /api/repos/:owner/:repo
   app.use("/api/webhooks", webhookRoutes); // has its own rate limiter (webhookLimiter)
+  app.use("/api/analysis", apiLimiter, aiRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
