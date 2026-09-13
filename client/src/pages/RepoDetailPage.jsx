@@ -52,18 +52,24 @@ export default function RepoDetailPage() {
       }
     };
     
-    // Also try fetching cached data
+    // Also try fetching cached data for all analysis tabs
     const fetchCachedData = async () => {
       try {
-        const [explRes, bugsRes] = await Promise.all([
+        const [explRes, bugsRes, qualRes, secRes, depRes] = await Promise.all([
           api.get(`/analysis/${repoId}/explain`).catch(() => null),
           api.get(`/analysis/${repoId}/bugs`).catch(() => null),
+          api.get(`/analysis/${repoId}/quality-score`).catch(() => null),
+          api.get(`/analysis/${repoId}/security-scan`).catch(() => null),
+          api.get(`/analysis/${repoId}/dependencies`).catch(() => null),
         ]);
         
         setData(prev => ({
           ...prev,
           explanation: explRes?.data?.data?.explanation || null,
-          bugs: bugsRes?.data?.data?.bugReport || null
+          bugs: bugsRes?.data?.data?.bugReport || null,
+          quality: qualRes?.data?.data?.qualityScore || null,
+          security: secRes?.data?.data?.securityScan || null,
+          dependencies: depRes?.data?.data?.dependencies || null,
         }));
       } catch (err) {
         // Silently fail cache fetch

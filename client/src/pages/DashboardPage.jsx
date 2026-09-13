@@ -62,6 +62,12 @@ export default function DashboardPage() {
 
   const repoList = Array.isArray(repos) ? repos : (repos?.repos || []);
 
+  const analyzedRepos = repoList.filter(r => r.lastAnalyzedAt || r.qualityScore || r.aiSummary);
+  const scoredRepos = repoList.filter(r => r.qualityScore?.overallScore != null);
+  const avgScore = scoredRepos.length > 0
+    ? Math.round(scoredRepos.reduce((acc, r) => acc + Number(r.qualityScore.overallScore), 0) / scoredRepos.length)
+    : null;
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -111,16 +117,17 @@ export default function DashboardPage() {
             <p className="mt-2 text-3xl font-bold text-white">{repoList.length}</p>
           </div>
           <div className="rounded-2xl border border-gray-700 bg-gray-800/50 p-6 backdrop-blur-sm">
-            <p className="text-sm text-gray-400">Total Bugs Found</p>
-            <p className="mt-2 text-3xl font-bold text-white">—</p>
+            <p className="text-sm text-gray-400">Analyzed Repositories</p>
+            <p className="mt-2 text-3xl font-bold text-emerald-400">{analyzedRepos.length}</p>
           </div>
           <div className="rounded-2xl border border-gray-700 bg-gray-800/50 p-6 backdrop-blur-sm">
             <p className="text-sm text-gray-400">Avg Quality Score</p>
-            <p className="mt-2 text-3xl font-bold text-white">—</p>
+            <p className="mt-2 text-3xl font-bold text-white">{avgScore !== null ? `${avgScore}/100` : "—"}</p>
           </div>
         </div>
 
         <h2 className="mb-6 font-display text-xl font-semibold">Your Repositories</h2>
+
 
         {loading ? (
           <div className="flex h-40 items-center justify-center rounded-2xl border border-gray-700 border-dashed bg-gray-800/20">

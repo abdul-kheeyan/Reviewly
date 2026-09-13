@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import { User } from '../models/User.js';
 import { signAccessToken, signRefreshToken } from '../middleware/auth.js';
 
@@ -88,6 +89,49 @@ export async function login(req, res, next) {
   }
 }
 
+export async function refreshTokenHandler(req, res, next) {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, error: 'Refresh token required' });
+    }
+
+    const secret = process.env.JWT_REFRESH_SECRET || "dev-refresh-secret-change-me";
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, secret);
+    } catch {
+      return res.status(401).json({ success: false, error: 'Invalid or expired refresh token' });
+    }
+
+    const user = await User.findById(decoded.sub);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'User no longer exists' });
+    }
+
+    const payload = { sub: user._id, role: user.role };
+    const newAccessToken = signAccessToken(payload);
+    const newRefreshToken = signRefreshToken(payload);
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatarUrl: user.avatarUrl
+        }
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getMe(req, res, next) {
   try {
     const user = await User.findById(req.auth.sub);
@@ -102,3 +146,4 @@ export async function getMe(req, res, next) {
     next(err);
   }
 }
+

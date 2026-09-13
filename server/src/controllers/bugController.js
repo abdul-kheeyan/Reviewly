@@ -20,8 +20,11 @@ export async function triggerBugAnalysis(req, res, next) {
       if (p.includes('node_modules') || p.includes('package-lock.json') || p.includes('yarn.lock')) return false;
       if (p.endsWith('.png') || p.endsWith('.jpg') || p.endsWith('.ico') || p.endsWith('.svg')) return false;
       if (p.endsWith('.md')) return false;
-      return p.endsWith('.js') || p.endsWith('.jsx') || p.endsWith('.ts') || p.endsWith('.tsx') || p.endsWith('.py') || p.endsWith('.go') || p.endsWith('.java');
+      return p.endsWith('.js') || p.endsWith('.jsx') || p.endsWith('.ts') || p.endsWith('.tsx') || 
+             p.endsWith('.py') || p.endsWith('.go') || p.endsWith('.java') || p.endsWith('.html') || 
+             p.endsWith('.css') || p.endsWith('.rs') || p.endsWith('.php') || p.endsWith('.c') || p.endsWith('.cpp');
     }).slice(0, 10);
+
 
     const files = [];
     for (const filePath of sourceFiles) {
@@ -59,12 +62,9 @@ export async function getBugReport(req, res, next) {
     }
 
     const bugReport = await BugReport.findOne({ repo: repo._id }).sort({ createdAt: -1 });
-    if (!bugReport) {
-      return res.status(404).json({ success: false, error: 'Bug report not found' });
-    }
-
-    res.json({ success: true, data: { bugReport } });
+    res.json({ success: true, data: { bugReport: bugReport || null } });
   } catch (err) {
     next(err);
   }
 }
+

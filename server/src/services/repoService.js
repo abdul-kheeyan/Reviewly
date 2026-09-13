@@ -1,11 +1,22 @@
 import { logger } from '../utils/logger.js';
 
+function getGithubHeaders() {
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'Reviewly-App'
+  };
+  if (process.env.GITHUB_TOKEN) {
+    headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+  return headers;
+}
+
 // Parse GitHub URL to extract owner and repo name
 // Handles: https://github.com/owner/repo, https://github.com/owner/repo.git, github.com/owner/repo
 export function parseGithubUrl(url) {
   try {
-    let cleanUrl = url.trim().replace(/\.git$/, '');
-    if (!cleanUrl.startsWith('http')) {
+    let cleanUrl = (url || '').trim().replace(/\.git$/, '').replace(/\/+$/, '');
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
       cleanUrl = `https://${cleanUrl}`;
     }
     const parsed = new URL(cleanUrl);
@@ -22,7 +33,7 @@ export function parseGithubUrl(url) {
 // Fetch repo metadata from GitHub public API
 export async function fetchRepoMeta(owner, name) {
   const res = await fetch(`https://api.github.com/repos/${owner}/${name}`, {
-    headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Reviewly-App' }
+    headers: getGithubHeaders()
   });
   if (!res.ok) {
     throw new Error(res.status === 404 ? 'Repository not found' : 'Failed to fetch repo metadata');
@@ -39,22 +50,41 @@ export async function fetchRepoMeta(owner, name) {
 
 // Fetch file tree from GitHub
 export async function fetchRepoTree(owner, name, branch = 'main') {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${name}/git/trees/${branch}?recursive=1`, {
-    headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Reviewly-App' }
+  let targetBranch = branch || 'main';
+  let res = await fetch(`https://api.github.com/repos/${owner}/${name}/git/trees/${targetBranch}?recursive=1`, {
+    headers: getGithubHeaders()
   });
+
+  // Fallback to master if defaultBranch was main and not found, or vice-versa
+  if (!res.ok && targetBranch === 'main') {
+    targetBranch = 'master';
+    res = await fetch(`https://api.github.com/repos/${owner}/${name}/git/trees/${targetBranch}?recursive=1`, {
+      headers: getGithubHeaders()
+    });
+  }
+
   if (!res.ok) {
-    throw new Error('Failed to fetch repo tree');
+    logger.warn({ owner, name, branch: targetBranch, status: res.status }, 'Failed to fetch repo tree from GitHub');
+    return [];
   }
   const data = await res.json();
-  if (!data.tree) return [];
+  if (!data.tree || !Array.isArray(data.tree)) return [];
   return data.tree.filter(item => item.type === 'blob').map(item => item.path);
 }
 
 // Fetch single file content
 export async function fetchFileContent(owner, name, filePath, branch = 'main') {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${name}/contents/${filePath}?ref=${branch}`, {
-    headers: { 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Reviewly-App' }
+  const targetBranch = branch || 'main';
+  let res = await fetch(`https://api.github.com/repos/${owner}/${name}/contents/${filePath}?ref=${targetBranch}`, {
+    headers: getGithubHeaders()
   });
+
+  if (!res.ok && targetBranch === 'main') {
+    res = await fetch(`https://api.github.com/repos/${owner}/${name}/contents/${filePath}?ref=master`, {
+      headers: getGithubHeaders()
+    });
+  }
+
   if (!res.ok) {
     logger.warn(`Failed to fetch file content for ${filePath}`);
     return null;
@@ -68,3 +98,4 @@ export async function fetchFileContent(owner, name, filePath, branch = 'main') {
   }
   return null;
 }
+

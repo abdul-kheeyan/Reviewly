@@ -12,11 +12,26 @@ export async function triggerExplain(req, res, next) {
 
     const fileTree = await fetchRepoTree(repo.owner, repo.name, repo.defaultBranch);
     
-    // Select key files
-    const keyFilePaths = fileTree.filter(path => {
+    // Select key files intelligently across all tech stacks
+    const priorityKeywords = ['readme.md', 'package.json', 'index.html', 'style.css', 'styles.css', 'script.js', 'app.js', 'main.js', 'index.js', 'app.py', 'main.py', 'requirements.txt', 'go.mod', 'cargo.toml', 'pom.xml', 'app.jsx', 'app.tsx'];
+    
+    let keyFilePaths = fileTree.filter(path => {
       const lower = path.toLowerCase();
-      return lower === 'readme.md' || lower === 'package.json' || lower.includes('src/index.js') || lower.includes('src/main.js') || lower.includes('app.js');
-    }).slice(0, 5);
+      const filename = lower.split('/').pop();
+      return priorityKeywords.some(keyword => filename === keyword || lower.endsWith(`/${keyword}`));
+    });
+
+    if (keyFilePaths.length < 3) {
+      const fallbackFiles = fileTree.filter(path => {
+        const lower = path.toLowerCase();
+        if (lower.includes('node_modules') || lower.includes('dist/') || lower.includes('.git/')) return false;
+        return lower.endsWith('.js') || lower.endsWith('.jsx') || lower.endsWith('.ts') || lower.endsWith('.tsx') || lower.endsWith('.html') || lower.endsWith('.css') || lower.endsWith('.py') || lower.endsWith('.java');
+      });
+      keyFilePaths = [...new Set([...keyFilePaths, ...fallbackFiles])];
+    }
+
+    keyFilePaths = keyFilePaths.slice(0, 8);
+
 
     const keyFileContents = [];
     for (const filePath of keyFilePaths) {
@@ -29,13 +44,14 @@ export async function triggerExplain(req, res, next) {
     const explanation = await explainRepo(repo, fileTree, keyFileContents);
 
     repo.aiSummary = explanation.summary || explanation.purpose;
+    repo.aiExplanation = explanation;
     repo.techStack = explanation.techStack || [];
     repo.lastAnalyzedAt = new Date();
     await repo.save();
 
     res.json({ success: true, data: { explanation } });
   } catch (err) {
-    logger.error(err, 'Failed to trigger explain');
+    logger.error({ err }, 'Failed to trigger explain');
     next(err);
   }
 }
@@ -46,9 +62,33 @@ export async function getExplanation(req, res, next) {
     if (!repo) {
       return res.status(404).json({ success: false, error: 'Repository not found' });
     }
+
+    if (!repo.aiExplanation && !repo.aiSummary) {
+      return res.json({ 
+        success: true, 
+        data: { 
+          explanation: null,
+          aiSummary: '', 
+          techStack: [],
+          lastAnalyzedAt: null
+        } 
+      });
+    }
+
+    const explanation = repo.aiExplanation || {
+      summary: repo.aiSummary || '',
+      purpose: '',
+      architecture: '',
+      techStack: repo.techStack || [],
+      keyFiles: [],
+      strengths: [],
+      improvements: []
+    };
+
     res.json({ 
       success: true, 
       data: { 
+        explanation,
         aiSummary: repo.aiSummary, 
         techStack: repo.techStack,
         lastAnalyzedAt: repo.lastAnalyzedAt
@@ -58,3 +98,5 @@ export async function getExplanation(req, res, next) {
     next(err);
   }
 }
+
+

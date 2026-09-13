@@ -24,16 +24,24 @@ router.post("/github", webhookLimiter, verifyGithubSignature, async (req, res, n
       return;
     }
 
-    const repo = await Repo.findOneAndUpdate(
-      { owner: payload.repository.owner.login, name: payload.repository.name },
-      {
-        owner: payload.repository.owner.login,
-        name: payload.repository.name,
+    const owner = payload.repository.owner.login;
+    const name = payload.repository.name;
+    const repoUrl = payload.repository.html_url || `https://github.com/${owner}/${name}`;
+
+    let repo = await Repo.findOne({ owner, name });
+    if (repo) {
+      repo.installationId = String(payload.installation?.id ?? repo.installationId);
+      repo.defaultBranch = payload.repository.default_branch || repo.defaultBranch;
+      await repo.save();
+    } else {
+      repo = await Repo.create({
+        owner,
+        name,
+        repoUrl,
         installationId: String(payload.installation?.id ?? ""),
-        defaultBranch: payload.repository.default_branch,
-      },
-      { upsert: true, new: true }
-    );
+        defaultBranch: payload.repository.default_branch || "main",
+      });
+    }
 
     const pr = await PullRequest.findOneAndUpdate(
       { repo: repo._id, number: payload.pull_request.number },
@@ -62,3 +70,4 @@ router.post("/github", webhookLimiter, verifyGithubSignature, async (req, res, n
 });
 
 export default router;
+

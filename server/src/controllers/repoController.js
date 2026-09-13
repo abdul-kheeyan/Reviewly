@@ -25,7 +25,13 @@ export async function addRepo(req, res, next) {
       return res.status(400).json({ success: false, error: 'You have already added this repository' });
     }
 
-    const meta = await fetchRepoMeta(owner, name);
+    let meta;
+    try {
+      meta = await fetchRepoMeta(owner, name);
+    } catch (metaErr) {
+      // Return a 400 Bad Request with the underlying error message from GitHub fetch
+      return res.status(400).json({ success: false, error: metaErr.message });
+    }
 
     const repo = new Repo({
       owner,
@@ -39,8 +45,16 @@ export async function addRepo(req, res, next) {
       defaultBranch: meta.defaultBranch
     });
 
-    await repo.save();
-    res.status(201).json({ success: true, data: { repo } });
+    try {
+      await repo.save();
+      res.status(201).json({ success: true, data: { repo } });
+    } catch (saveErr) {
+      // Handle duplicate repository error (unique index violation)
+      if (saveErr.code === 11000) {
+        return res.status(400).json({ success: false, error: 'Repository already added' });
+      }
+      return next(saveErr);
+    }
   } catch (err) {
     next(err);
   }
